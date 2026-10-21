@@ -1,5 +1,6 @@
-// Transparent estimate engine. Pure functions, no framework imports.
-// Every selected option produces its own line item, so nothing is silently ignored.
+// Transparent estimate engine — pure functions, no React imports.
+// Computes a detailed devis with material + labour lines, overhead, profit
+// and contingency, all shown separately.
 
 import { ESTIMATOR_CONFIG } from './estimatorConfig.js';
 import { parseLocaleNumber, validateDimensions } from '../../lib/validation.js';
@@ -13,8 +14,8 @@ export function getFloorMultiplier(floors, config = ESTIMATOR_CONFIG) {
 
 /**
  * @param input  { category, area, floors, location, startDate, scopes: string[], extras: string[] }
- * @param config estimator configuration (defaults to ESTIMATOR_CONFIG)
- * @returns { ok:false, errors } | { ok:true, lines, subtotal, extrasTotal, contingency, total, range, assumptions }
+ * @param config estimator configuration
+ * @returns { ok:false, errors } | { ok:true, ...detailed breakdown }
  */
 export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new Date()) {
   const errors = validateDimensions(input, config.limits, today);
@@ -33,66 +34,130 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
   const floors = parseLocaleNumber(input.floors);
   const floorMultiplier = getFloorMultiplier(floors, config);
 
-  const lines = [];
-  lines.push({
-    id: 'base',
-    kind: 'base',
-    quantity: area,
-    rate: category.baseRate,
-    multiplier: floorMultiplier,
-    amount: roundMoney(area * category.baseRate * floorMultiplier),
-  });
-
-  for (const id of scopes) {
-    const rate = config.scopes[id].rate;
-    lines.push({
-      id,
-      kind: 'scope',
+  // ----- 1. BASE STRUCTURE LINE -----
+  const baseAmount = roundMoney(area * category.baseRate * floorMultiplier);
+  const lines = [
+    {
+      id: 'base',
+      kind: 'base',
+      label: `Structure de base — ${category.label}`,
       quantity: area,
-      rate,
-      multiplier: category.scopeMultiplier * floorMultiplier,
-      amount: roundMoney(area * rate * category.scopeMultiplier * floorMultiplier),
-    });
+      unit: 'm²',
+      unitPrice: category.baseRate,
+      multiplier: floorMultiplier,
+      material: category.baseRate * 0.55, // indicative split
+      labour: category.baseRate * 0.45,
+      amount: baseAmount,
+    },
+  ];
+
+  // ----- 2. DETAILED SCOPE LINES -----
+  for (const scopeId of scopes) {
+    const scope = config.scopes[scopeId];
+    if (!scope) continue;
+
+    for (const item of scope.items) {
+      // Quantity: either proportional to area or absolute (forfait)
+      const quantity =
+        item.unit === 'forfait' || item.unit === 'u'
+          ? item.qtyFactor
+          : roundTo(area * item.qtyFactor, 1);
+
+      const unitMaterial = item.material;
+      const unitLabour = item.labour;
+      const unitPrice = unitMaterial + unitLabour;
+      const amount = roundMoney(quantity * unitPrice * floorMultiplier);
+
+      lines.push({
+        id: `${scopeId}__${item.id}`,
+        kind: 'scope',
+        scopeId,
+        label: item.label,
+        note: item.note,
+        quantity,
+        unit: item.unit,
+        unitPrice,
+        material: unitMaterial,
+        labour: unitLabour,
+        multiplier: floorMultiplier,
+        amount,
+      });
+    }
   }
 
+  // ----- 3. SUBTOTAL (materials + labour) -----
   const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
 
+  // ----- 4. SITE OVERHEAD -----
+  const siteOverhead = roundMoney(subtotal * config.siteOverhead);
+
+  // ----- 5. PROFIT MARGIN -----
+  const profit = roundMoney((subtotal + siteOverhead) * config.profitMargin);
+
+  // ----- 6. EXTRAS (optional) -----
   const extraLines = extras.map((id) => {
     const def = config.extras[id];
+    if (!def) return null;
+    const amount =
+      def.type === 'percent'
+        ? roundMoney(subtotal * def.value)
+        : roundMoney(def.value);
     return {
       id,
       kind: 'extra',
+      label: def.label,
       type: def.type,
       rate: def.value,
-      amount: def.type === 'percent' ? roundMoney(subtotal * def.value) : roundMoney(def.value),
+      amount,
     };
-  });
+  }).filter(Boolean);
+
   const extrasTotal = extraLines.reduce((sum, l) => sum + l.amount, 0);
 
-  const contingency = roundMoney((subtotal + extrasTotal) * config.contingency);
-  const total = subtotal + extrasTotal + contingency;
+  // ----- 7. CONTINGENCY -----
+  const preContingency = subtotal + siteOverhead + profit + extrasTotal;
+  const contingency = roundMoney(preContingency * config.contingency);
 
+  // ----- 8. FINAL TOTAL -----
+  const total = preContingency + contingency;
+
+  // ----- 9. INDICATIVE RANGE -----
   const range = {
     low: roundTo(total * (1 - config.range.lowerPct), config.range.roundTo),
     high: roundTo(total * (1 + config.range.upperPct), config.range.roundTo),
   };
+
+  // ----- 10. MATERIAL / LABOUR TOTALS (for transparency) -----
+  const totalMaterial = lines.reduce(
+    (sum, l) => sum + (l.material || 0) * (l.quantity || 1) * (l.multiplier || 1),
+    0
+  );
+  const totalLabour = lines.reduce(
+    (sum, l) => sum + (l.labour || 0) * (l.quantity || 1) * (l.multiplier || 1),
+    0
+  );
 
   return {
     ok: true,
     lines,
     extraLines,
     subtotal,
+    siteOverhead,
+    profit,
     extrasTotal,
     contingency,
     total,
     range,
+    totalMaterial: roundMoney(totalMaterial),
+    totalLabour: roundMoney(totalLabour),
     assumptions: {
       area,
       floors,
       category: input.category,
-      baseRate: category.baseRate,
-      scopeMultiplier: category.scopeMultiplier,
+      categoryLabel: category.label,
       floorMultiplier,
+      siteOverheadRate: config.siteOverhead,
+      profitRate: config.profitMargin,
       contingencyRate: config.contingency,
       lowerPct: config.range.lowerPct,
       upperPct: config.range.upperPct,
@@ -103,8 +168,7 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
 }
 
 /**
- * UI-facing wrapper: returns `null` when numeric estimates are disabled so that
- * no number can leak into the summary or the inquiry message.
+ * UI-facing wrapper: returns `null` when numeric estimates are disabled.
  */
 export function resolveEstimate(input, config = ESTIMATOR_CONFIG, today = new Date()) {
   if (config.mode === 'disabled') return null;
