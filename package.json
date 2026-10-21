@@ -1,0 +1,30 @@
+{
+  "name": "7dconstruction",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Site vitrine 3D de l'Entreprise BTP 7DCONSTRUCTION (Tebourba, Tunisie)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --no-warnings scripts/test-logic.mjs && node --no-warnings scripts/check-locales.mjs && node --no-warnings scripts/check-imports.mjs && node --no-warnings scripts/test-models.mjs"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.0.0",
+    "framer-motion": "^11.18.0",
+    "lucide-react": "^0.469.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.171.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17"
+  }
+}
