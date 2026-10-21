@@ -4,43 +4,7 @@
     Détail ligne par ligne
   </h4>
 
-  <div className="mt-4 overflow-x-auto">
-    <table className="w-full text-left text-xs">
-      <thead className="border-b border-ivory/20 text-steel">
-        <tr>
-          <th className="py-2 pe-4">Désignation</th>
-          <th className="py-2 pe-4 text-end">Qté</th>
-          <th className="py-2 pe-4 text-end">Matériau</th>
-          <th className="py-2 pe-4 text-end">Main d’œuvre</th>
-          <th className="py-2 text-end">Total</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-ivory/10">
-        {estimate.lines.map((l) => (
-          <tr key={l.id}>
-            <td className="py-2 pe-4">
-              <span className="text-ivory">{l.label}</span>
-              {l.note && (
-                <span className="block text-[0.65rem] text-steel">{l.note}</span>
-              )}
-            </td>
-            <td className="py-2 pe-4 text-end font-mono text-ivory">
-              {l.quantity} {l.unit}
-            </td>
-            <td className="py-2 pe-4 text-end font-mono text-steel">
-              {money(l.material)}
-            </td>
-            <td className="py-2 pe-4 text-end font-mono text-steel">
-              {money(l.labour)}
-            </td>
-            <td className="py-2 text-end font-mono text-ivory">
-              {money(l.amount)}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+  {/* ... (your existing table for lines) ... */}
 
   {/* Transparent totals */}
   <dl className="mt-6 space-y-2 border-t border-ivory/20 pt-4 text-sm">
@@ -66,6 +30,13 @@
         <dd className="font-mono text-ivory">{money(e.amount)}</dd>
       </div>
     ))}
+    {/* NEW: Engineering fees */}
+    <div className="flex justify-between">
+      <dt className="text-steel">
+        Honoraires d’ingénierie ({(estimate.assumptions.engStudyPercent * 100).toFixed(0)} % + forfait OIT)
+      </dt>
+      <dd className="font-mono text-ivory">{money(estimate.engStudyFee)}</dd>
+    </div>
     <div className="flex justify-between">
       <dt className="text-steel">
         Imprévus ({(estimate.assumptions.contingencyRate * 100).toFixed(0)} %)
