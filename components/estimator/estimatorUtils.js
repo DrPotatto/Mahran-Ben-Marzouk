@@ -1,6 +1,6 @@
 // Transparent estimate engine — pure functions, no React imports.
-// Computes a detailed devis with material + labour lines, overhead, profit
-// and contingency, all shown separately.
+// Computes a detailed devis with material + labour lines, overhead, profit,
+// contingency, and OIT-regulated engineering fees.
 
 import { ESTIMATOR_CONFIG } from './estimatorConfig.js';
 import { parseLocaleNumber, validateDimensions } from '../../lib/validation.js';
@@ -12,11 +12,6 @@ export function getFloorMultiplier(floors, config = ESTIMATOR_CONFIG) {
   return 1 + (floors - 1) * config.floors.perExtraFloor;
 }
 
-/**
- * @param input  { category, area, floors, location, startDate, scopes: string[], extras: string[] }
- * @param config estimator configuration
- * @returns { ok:false, errors } | { ok:true, ...detailed breakdown }
- */
 export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new Date()) {
   const errors = validateDimensions(input, config.limits, today);
 
@@ -45,7 +40,7 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
       unit: 'm²',
       unitPrice: category.baseRate,
       multiplier: floorMultiplier,
-      material: category.baseRate * 0.55, // indicative split
+      material: category.baseRate * 0.55,
       labour: category.baseRate * 0.45,
       amount: baseAmount,
     },
@@ -55,17 +50,13 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
   for (const scopeId of scopes) {
     const scope = config.scopes[scopeId];
     if (!scope) continue;
-
     for (const item of scope.items) {
-      // Quantity: either proportional to area or absolute (forfait)
       const quantity =
         item.unit === 'forfait' || item.unit === 'u'
           ? item.qtyFactor
           : roundTo(area * item.qtyFactor, 1);
 
-      const unitMaterial = item.material;
-      const unitLabour = item.labour;
-      const unitPrice = unitMaterial + unitLabour;
+      const unitPrice = item.material + item.labour;
       const amount = roundMoney(quantity * unitPrice * floorMultiplier);
 
       lines.push({
@@ -77,8 +68,8 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
         quantity,
         unit: item.unit,
         unitPrice,
-        material: unitMaterial,
-        labour: unitLabour,
+        material: item.material,
+        labour: item.labour,
         multiplier: floorMultiplier,
         amount,
       });
@@ -95,39 +86,49 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
   const profit = roundMoney((subtotal + siteOverhead) * config.profitMargin);
 
   // ----- 6. EXTRAS (optional) -----
-  const extraLines = extras.map((id) => {
-    const def = config.extras[id];
-    if (!def) return null;
-    const amount =
-      def.type === 'percent'
-        ? roundMoney(subtotal * def.value)
-        : roundMoney(def.value);
-    return {
-      id,
-      kind: 'extra',
-      label: def.label,
-      type: def.type,
-      rate: def.value,
-      amount,
-    };
-  }).filter(Boolean);
+  const extraLines = extras
+    .map((id) => {
+      const def = config.extras[id];
+      if (!def) return null;
+      const amount =
+        def.type === 'percent'
+          ? roundMoney(subtotal * def.value)
+          : roundMoney(def.value);
+      return {
+        id,
+        kind: 'extra',
+        label: def.label,
+        type: def.type,
+        rate: def.value,
+        amount,
+      };
+    })
+    .filter(Boolean);
 
   const extrasTotal = extraLines.reduce((sum, l) => sum + l.amount, 0);
 
-  // ----- 7. CONTINGENCY -----
-  const preContingency = subtotal + siteOverhead + profit + extrasTotal;
+  // ----- 7. ENGINEERING FEES (OIT-regulated) -----
+  // 3% of the pre-fee total, plus a fixed fee (we use the midpoint of the range).
+  const preFeeTotal = subtotal + siteOverhead + profit + extrasTotal;
+  const engStudyFee = roundMoney(
+    preFeeTotal * config.engineering.studyPercent +
+      (config.engineering.fixedFeeMin + config.engineering.fixedFeeMax) / 2
+  );
+
+  // ----- 8. CONTINGENCY -----
+  const preContingency = preFeeTotal + engStudyFee;
   const contingency = roundMoney(preContingency * config.contingency);
 
-  // ----- 8. FINAL TOTAL -----
+  // ----- 9. FINAL TOTAL -----
   const total = preContingency + contingency;
 
-  // ----- 9. INDICATIVE RANGE -----
+  // ----- 10. INDICATIVE RANGE -----
   const range = {
     low: roundTo(total * (1 - config.range.lowerPct), config.range.roundTo),
     high: roundTo(total * (1 + config.range.upperPct), config.range.roundTo),
   };
 
-  // ----- 10. MATERIAL / LABOUR TOTALS (for transparency) -----
+  // ----- 11. MATERIAL / LABOUR TOTALS (for transparency) -----
   const totalMaterial = lines.reduce(
     (sum, l) => sum + (l.material || 0) * (l.quantity || 1) * (l.multiplier || 1),
     0
@@ -145,6 +146,7 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
     siteOverhead,
     profit,
     extrasTotal,
+    engStudyFee,
     contingency,
     total,
     range,
@@ -159,6 +161,7 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
       siteOverheadRate: config.siteOverhead,
       profitRate: config.profitMargin,
       contingencyRate: config.contingency,
+      engStudyPercent: config.engineering.studyPercent,
       lowerPct: config.range.lowerPct,
       upperPct: config.range.upperPct,
       currency: config.currency,
@@ -167,9 +170,6 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
   };
 }
 
-/**
- * UI-facing wrapper: returns `null` when numeric estimates are disabled.
- */
 export function resolveEstimate(input, config = ESTIMATOR_CONFIG, today = new Date()) {
   if (config.mode === 'disabled') return null;
   return calculateEstimate(input, config, today);
