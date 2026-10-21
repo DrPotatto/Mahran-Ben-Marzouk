@@ -47,7 +47,7 @@ export default function QuoteSummary({ input, estimate }) {
         </section>
       </div>
 
-      {/* ----- DETAILED LINE-ITEM TABLE ----- */}
+      {/* DETAILED LINE-ITEM TABLE */}
       {estimate && estimate.ok ? (
         <>
           <section aria-labelledby="sum-detail">
@@ -85,7 +85,7 @@ export default function QuoteSummary({ input, estimate }) {
             </div>
           </section>
 
-          {/* ----- TRANSPARENT TOTALS ----- */}
+          {/* TRANSPARENT TOTALS */}
           <section aria-labelledby="sum-totals">
             <h4 id="sum-totals" className="font-mono text-[0.7rem] uppercase tracking-technical text-gold">
               Récapitulatif
