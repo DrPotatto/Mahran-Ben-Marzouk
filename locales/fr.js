@@ -28,6 +28,7 @@ const fr = {
     projects: 'Réalisations',
     process: 'Méthode',
     contact: 'Contact',
+	 locationMap: 'Nous trouver sur la carte',
     quote: 'Demander un devis',
   },
 

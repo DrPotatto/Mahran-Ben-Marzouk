@@ -27,6 +27,7 @@ const ar = {
     projects: 'الإنجازات',
     process: 'منهجية العمل',
     contact: 'اتصل بنا',
+	locationMap: 'موقعنا على الخريطة',
     quote: 'اطلب عرض سعر',
   },
 

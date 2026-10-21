@@ -27,6 +27,7 @@ const en = {
     projects: 'Projects',
     process: 'Method',
     contact: 'Contact',
+	locationMap: 'Find us on the map',
     quote: 'Request a quote',
   },
 
