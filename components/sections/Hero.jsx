@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
@@ -56,35 +56,61 @@ export default function Hero() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const show3d = Boolean(caps && caps.webgl && !caps.saveData && !failed);
+  // 3D is wanted as soon as the device probe says WebGL is usable.
+  // IMPORTANT: once this becomes true we NEVER unmount the canvas.
+  // drei's <Html> owns its own React root; tearing it down synchronously
+  // during React's render phase triggers a React 19 warning. So when 3D
+  // fails, we hide the canvas with CSS and pause it, but leave it in the
+  // tree for the lifetime of the hero section.
+  const wants3d = Boolean(caps && caps.webgl && !caps.saveData);
+  const show3d = wants3d && !failed;
   const quality = caps?.quality ?? 'high';
 
-  const labels = {
-    structure: t('hero.annotations.structure'),
-    materials: t('hero.annotations.materials'),
-    architecture: t('hero.annotations.architecture'),
-    finishing: t('hero.annotations.finishing'),
-  };
-  const dimensions = {
-    width: `${formatNumber(17, lang, { minimumFractionDigits: 2 })} m`,
-    height: `${formatNumber(6.65, lang, { minimumFractionDigits: 2 })} m`,
-  };
+  // Stable payloads for HeroScene: avoids passing a brand-new object on every
+  // scroll-driven re-render, which would otherwise churn drei's <Html> roots.
+  const labels = useMemo(
+    () => ({
+      structure: t('hero.annotations.structure'),
+      materials: t('hero.annotations.materials'),
+      architecture: t('hero.annotations.architecture'),
+      finishing: t('hero.annotations.finishing'),
+    }),
+    [t]
+  );
+
+  const dimensions = useMemo(
+    () => ({
+      width: `${formatNumber(17, lang, { minimumFractionDigits: 2 })} m`,
+      height: `${formatNumber(6.65, lang, { minimumFractionDigits: 2 })} m`,
+    }),
+    [lang]
+  );
 
   return (
     <section id="hero" ref={sectionRef} aria-labelledby="hero-title" className="relative min-h-[100svh] overflow-hidden bg-ink">
       {/* Background: live 3D scene, or an honest drawing if 3D is unavailable */}
       <div className="absolute inset-0" role="img" aria-label={t('hero.sceneLabel')}>
-        {show3d ? (
-          <HeroScene
-            quality={quality}
-            paused={!inView}
-            reducedMotion={reduced}
-            scrollRef={scrollRef}
-            labels={labels}
-            dimensions={dimensions}
-            onFail={() => setFailed(true)}
-          />
-        ) : (
+        {wants3d && (
+          <div
+            className={
+              show3d
+                ? 'absolute inset-0'
+                : 'pointer-events-none invisible absolute inset-0'
+            }
+          >
+            <HeroScene
+              quality={quality}
+              paused={!inView || !show3d}
+              reducedMotion={reduced}
+              scrollRef={scrollRef}
+              labels={labels}
+              dimensions={dimensions}
+              onFail={() => setFailed(true)}
+            />
+          </div>
+        )}
+
+        {!show3d && (
           <div className="blueprint-grid relative h-full w-full">
             {caps ? (
               <div className="absolute inset-0 flex items-center justify-end text-steel/40 sm:pe-[6%]">
