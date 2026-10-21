@@ -7,14 +7,6 @@ import { MathUtils, Vector3 } from 'three';
 import SceneEnvironment, { Ground } from './SceneEnvironment';
 import ArchitecturalModel from './ArchitecturalModel';
 
-// Cinematic hero: the procedural villa under golden-hour light.
-//
-// Camera system (frame-rate independent):
-//  1. Intro: a 3.4 s dolly from a distant, high viewpoint to the first composition (ease-out cubic).
-//  2. Scroll: while the hero scrolls away, the camera glides through four composed viewpoints.
-//  3. Drift: a very slow sinusoidal sway keeps the image alive (disabled with reduced motion).
-// The Canvas loop is 'always' only while the hero is visible; otherwise it is paused.
-
 const KEYS = [
   { pos: [25, 8.5, 31], target: [0.5, 3.4, 3] },
   { pos: [-3, 5.2, 33], target: [1.5, 3.8, 2] },
@@ -66,6 +58,19 @@ function HeroCamera({ scrollRef, reducedMotion }) {
   return null;
 }
 
+// Stable module-level anchors. Passing a fresh array to <Html> on every render
+// is harmless, but these constants make the intent explicit and keep the
+// reconciler calm as the hero re-renders (scroll, language switch, etc.).
+const TAG_ANCHORS = {
+  structure: [-6.2, 3.4, 4.2],
+  materials: [6.9, 2.0, -0.5],
+  architecture: [7.6, 6.2, 0.5],
+  finishing: [-4.3, 5.8, 1.0],
+};
+
+const DIM_WIDTH = { from: [-8.5, 0.06, 6.4], to: [8.5, 0.06, 6.4] };
+const DIM_HEIGHT = { from: [-9.9, 0, 5.5], to: [-9.9, 6.65, 5.5] };
+
 // Screen-space technical label anchored to a 3D point.
 function Tag({ position, text, align = 'start' }) {
   return (
@@ -114,14 +119,14 @@ export default function HeroScene({ quality, paused, reducedMotion, scrollRef, l
       <HeroCamera scrollRef={scrollRef} reducedMotion={reducedMotion} />
 
       {/* Technical annotations: kept to four, anchored on the building itself */}
-      <Tag position={[-6.2, 3.4, 4.2]} text={labels.structure} align="start" />
-      <Tag position={[6.9, 2.0, -0.5]} text={labels.materials} align="end" />
-      <Tag position={[7.6, 6.2, 0.5]} text={labels.architecture} align="end" />
-      <Tag position={[-4.3, 5.8, 1.0]} text={labels.finishing} align="start" />
+      <Tag position={TAG_ANCHORS.structure} text={labels.structure} align="start" />
+      <Tag position={TAG_ANCHORS.materials} text={labels.materials} align="end" />
+      <Tag position={TAG_ANCHORS.architecture} text={labels.architecture} align="end" />
+      <Tag position={TAG_ANCHORS.finishing} text={labels.finishing} align="start" />
 
       {/* Measurement lines (conceptual model dimensions) */}
-      <DimensionLine from={[-8.5, 0.06, 6.4]} to={[8.5, 0.06, 6.4]} label={dimensions.width} />
-      <DimensionLine from={[-9.9, 0, 5.5]} to={[-9.9, 6.65, 5.5]} label={dimensions.height} />
+      <DimensionLine from={DIM_WIDTH.from} to={DIM_WIDTH.to} label={dimensions.width} />
+      <DimensionLine from={DIM_HEIGHT.from} to={DIM_HEIGHT.to} label={dimensions.height} />
     </Canvas>
   );
 }
