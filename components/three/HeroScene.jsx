@@ -35,7 +35,7 @@ function HeroCamera({ scrollRef, reducedMotion }) {
   const elapsed = useRef(0);
 
   useFrame((state, delta) => {
-    const dt = Math.min(delta, 0.1); // avoid jumps after tab switches
+    const dt = Math.min(delta, 0.1); 
     elapsed.current += dt;
     smooth.current = MathUtils.damp(smooth.current, reducedMotion ? 0 : scrollRef.current, 3.2, dt);
 
@@ -58,9 +58,7 @@ function HeroCamera({ scrollRef, reducedMotion }) {
   return null;
 }
 
-// Stable module-level anchors. Passing a fresh array to <Html> on every render
-// is harmless, but these constants make the intent explicit and keep the
-// reconciler calm as the hero re-renders (scroll, language switch, etc.).
+// 🔥 Stable module-level constants prevent unnecessary re-renders
 const TAG_ANCHORS = {
   structure: [-6.2, 3.4, 4.2],
   materials: [6.9, 2.0, -0.5],
@@ -71,7 +69,6 @@ const TAG_ANCHORS = {
 const DIM_WIDTH = { from: [-8.5, 0.06, 6.4], to: [8.5, 0.06, 6.4] };
 const DIM_HEIGHT = { from: [-9.9, 0, 5.5], to: [-9.9, 6.65, 5.5] };
 
-// Screen-space technical label anchored to a 3D point.
 function Tag({ position, text, align = 'start' }) {
   return (
     <Html position={position} zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
@@ -118,13 +115,11 @@ export default function HeroScene({ quality, paused, reducedMotion, scrollRef, l
       <ArchitecturalModel model="villa" material="concrete" lighting="golden" />
       <HeroCamera scrollRef={scrollRef} reducedMotion={reducedMotion} />
 
-      {/* Technical annotations: kept to four, anchored on the building itself */}
       <Tag position={TAG_ANCHORS.structure} text={labels.structure} align="start" />
       <Tag position={TAG_ANCHORS.materials} text={labels.materials} align="end" />
       <Tag position={TAG_ANCHORS.architecture} text={labels.architecture} align="end" />
       <Tag position={TAG_ANCHORS.finishing} text={labels.finishing} align="start" />
 
-      {/* Measurement lines (conceptual model dimensions) */}
       <DimensionLine from={DIM_WIDTH.from} to={DIM_WIDTH.to} label={dimensions.width} />
       <DimensionLine from={DIM_HEIGHT.from} to={DIM_HEIGHT.to} label={dimensions.height} />
     </Canvas>

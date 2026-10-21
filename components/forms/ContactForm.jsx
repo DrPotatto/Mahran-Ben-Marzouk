@@ -5,7 +5,7 @@ import { Copy, Mail, MessageCircle, Send } from 'lucide-react';
 import Button from '../ui/Button';
 import Field, { inputClass } from './Field';
 import { validateContact } from '../../lib/validation';
-import { buildInquiryMessage, buildMailtoLink, buildWhatsAppLink, getContactConfig, submitInquiry } from '../../lib/contact';
+import { buildInquiryMessage, buildMailtoLink, buildWhatsAppLink, getContactConfig } from '../../lib/contact';
 import { formatCurrency } from '../../lib/formatters';
 import { useI18n } from '../AppProvider';
 
@@ -19,12 +19,11 @@ export default function ContactForm({ project = null, estimate = null, initialMe
     email: '',
     preferred: contactCfg.whatsapp ? 'whatsapp' : 'phone',
     message: initialMessage,
-    website: '', // honeypot: real users never fill this
+    website: '', 
   });
   const [errors, setErrors] = useState({});
-  const [status, setStatus] = useState('idle'); // idle | sending | saved | unconfigured | failed
-  const [copied, setCopied] = useState(null); // 'ok' | 'fail' | null
-  const statusRef = useRef(null);
+  const [status, setStatus] = useState('idle'); 
+  const [copied, setCopied] = useState(null); 
 
   const lastTopic = useRef(initialMessage);
   useEffect(() => {
@@ -69,13 +68,7 @@ export default function ContactForm({ project = null, estimate = null, initialMe
   const validate = () => {
     const found = validateContact(values);
     setErrors(found);
-    
-    // If there are errors, we need to tell the user visually
-    if (Object.keys(found).length > 0) {
-      // The error messages will show up under the fields automatically
-      return false;
-    }
-    return true;
+    return Object.keys(found).length === 0;
   };
 
   const errorText = (field) => {
@@ -83,40 +76,27 @@ export default function ContactForm({ project = null, estimate = null, initialMe
     return e ? t(`validation.${e.code}`, e.params) : undefined;
   };
 
-  const onSubmit = async (e) => {
+  const onSubmit = (e) => {
     e.preventDefault();
-    setCopied(null);
-    if (!validate()) {
-      setStatus('idle');
-      return;
+    if (!validate()) return;
+
+    // 🔥 BYPASS EVERYTHING and open WhatsApp directly!
+    if (contactCfg.whatsapp) {
+      window.location.href = buildWhatsAppLink(contactCfg.whatsapp, messageText);
+    } else {
+      // Fallback to email if no whatsapp
+      window.location.href = buildMailtoLink(contactCfg.email, t('inquiry.subject'), messageText);
     }
-    setStatus('sending');
-    const result = await submitInquiry({
-      contact: values,
-      message: messageText,
-      estimate,
-      lang,
-      honeypot: values.website,
-    });
-    setStatus(result.status);
-    requestAnimationFrame(() => statusRef.current?.focus());
   };
 
   const openChannel = (kind) => {
-    // The user MUST fill in Name and Phone to generate a valid message
     if (!validate()) return;
-    
     if (kind === 'whatsapp') {
       const link = buildWhatsAppLink(contactCfg.whatsapp, messageText);
-      if (link) {
-        // Using location.href is safer than window.open and bypasses popup blockers
-        window.location.href = link;
-      }
+      if (link) window.location.href = link;
     } else if (kind === 'email') {
       const link = buildMailtoLink(contactCfg.email, t('inquiry.subject'), messageText);
-      if (link) {
-        window.location.href = link;
-      }
+      if (link) window.location.href = link;
     }
   };
 
@@ -168,7 +148,6 @@ export default function ContactForm({ project = null, estimate = null, initialMe
             </label>
           ))}
         </div>
-        {errorText('preferred') ? <p role="alert" className="mt-1.5 text-sm text-amber">{errorText('preferred')}</p> : null}
       </fieldset>
 
       <Field id={`${idPrefix}-message`} label={t('contact.form.message')} optionalLabel={t('contact.form.optional')} error={errorText('message')}>
@@ -185,20 +164,10 @@ export default function ContactForm({ project = null, estimate = null, initialMe
         )}
       </Field>
 
-      {/* Honeypot: hidden from people and assistive tech */}
-      <div aria-hidden="true" className="pointer-events-none absolute start-0 top-0 h-0 w-0 overflow-hidden opacity-0">
-        <label>
-          Website
-          <input type="text" tabIndex={-1} autoComplete="off" value={values.website} onChange={setField('website')} />
-        </label>
-      </div>
-
-      {estimate ? <p className="text-xs text-steel">{t('contact.form.attached')}</p> : null}
-
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <Button type="submit" size="lg" disabled={status === 'sending'}>
+        <Button type="submit" size="lg">
           <Send size={16} aria-hidden="true" className="rtl:-scale-x-100" />
-          {status === 'sending' ? t('contact.form.sending') : t('contact.form.submit')}
+          {t('contact.form.submit')}
         </Button>
         {contactCfg.whatsapp ? (
           <Button type="button" variant="secondary" size="lg" onClick={() => openChannel('whatsapp')}>
@@ -218,12 +187,7 @@ export default function ContactForm({ project = null, estimate = null, initialMe
         </Button>
       </div>
 
-      <div ref={statusRef} tabIndex={-1} aria-live="polite" className="outline-none">
-        {status === 'saved' ? <StatusBox tone="ok" title={t('contact.status.savedTitle')} text={t('contact.status.saved')} /> : null}
-        {status === 'unconfigured' ? (
-          <StatusBox tone="warn" title={t('contact.status.unconfiguredTitle')} text={t('contact.status.unconfigured')} />
-        ) : null}
-        {status === 'failed' ? <StatusBox tone="error" title={t('contact.status.failedTitle')} text={t('contact.status.failed')} /> : null}
+      <div aria-live="polite" className="outline-none">
         {copied === 'ok' ? <p className="mt-3 text-sm text-gold">{t('contact.actions.copied')}</p> : null}
         {copied === 'fail' ? <p className="mt-3 text-sm text-amber">{t('contact.actions.copyFailed')}</p> : null}
       </div>
@@ -237,19 +201,5 @@ export default function ContactForm({ project = null, estimate = null, initialMe
 
       <p className="text-xs text-steel">{t('contact.form.privacy')}</p>
     </form>
-  );
-}
-
-function StatusBox({ tone, title, text }) {
-  const styles = {
-    ok: 'border-gold/60 bg-gold/10',
-    warn: 'border-amber/60 bg-amber/10',
-    error: 'border-red-400/60 bg-red-400/10',
-  };
-  return (
-    <div role="status" className={`mt-2 border px-4 py-3 ${styles[tone]}`}>
-      <p className="font-semibold text-ivory">{title}</p>
-      <p className="mt-1 text-sm text-steel">{text}</p>
-    </div>
   );
 }

@@ -11,12 +11,10 @@ import { formatCoordinate, formatNumber } from '../../lib/formatters';
 import { SITE } from '../../data/site';
 import { useI18n } from '../AppProvider';
 
-// The 3D scene is loaded on the client only, after first paint.
 const HeroScene = dynamic(() => import('../three/HeroScene'), { ssr: false });
 
 const TAGS = ['structure', 'materials', 'architecture', 'finishing'];
 
-// Staggered text entrance (skipped for reduced motion).
 function Rise({ children, delay = 0, reduced, as = 'div', className = '' }) {
   if (reduced) {
     const Tag = as;
@@ -44,7 +42,6 @@ export default function Hero() {
   const scrollRef = useRef(0);
   const [failed, setFailed] = useState(false);
 
-  // Scroll progress through the hero drives the camera between composed viewpoints.
   useEffect(() => {
     const onScroll = () => {
       const el = sectionRef.current;
@@ -56,18 +53,10 @@ export default function Hero() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // 3D is wanted as soon as the device probe says WebGL is usable.
-  // IMPORTANT: once this becomes true we NEVER unmount the canvas.
-  // drei's <Html> owns its own React root; tearing it down synchronously
-  // during React's render phase triggers a React 19 warning. So when 3D
-  // fails, we hide the canvas with CSS and pause it, but leave it in the
-  // tree for the lifetime of the hero section.
   const wants3d = Boolean(caps && caps.webgl && !caps.saveData);
   const show3d = wants3d && !failed;
   const quality = caps?.quality ?? 'high';
 
-  // Stable payloads for HeroScene: avoids passing a brand-new object on every
-  // scroll-driven re-render, which would otherwise churn drei's <Html> roots.
   const labels = useMemo(
     () => ({
       structure: t('hero.annotations.structure'),
@@ -88,14 +77,14 @@ export default function Hero() {
 
   return (
     <section id="hero" ref={sectionRef} aria-labelledby="hero-title" className="relative min-h-[100svh] overflow-hidden bg-ink">
-      {/* Background: live 3D scene, or an honest drawing if 3D is unavailable */}
       <div className="absolute inset-0" role="img" aria-label={t('hero.sceneLabel')}>
+        {/* 🔥 The Canvas is rendered ONLY if wants3d is true, and it NEVER unmounts once mounted. */}
         {wants3d && (
           <div
             className={
               show3d
                 ? 'absolute inset-0'
-                : 'pointer-events-none invisible absolute inset-0'
+                : 'pointer-events-none invisible absolute inset-0' // Hides the canvas gracefully instead of unmounting
             }
           >
             <HeroScene
@@ -121,11 +110,9 @@ export default function Hero() {
         )}
       </div>
 
-      {/* Legibility gradients */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink via-ink/25 to-ink/40" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink/85 via-ink/35 to-transparent rtl:bg-gradient-to-l" />
 
-      {/* Opening curtain */}
       {!reduced ? (
         <motion.div
           aria-hidden="true"
@@ -136,7 +123,6 @@ export default function Hero() {
         />
       ) : null}
 
-      {/* Content */}
       <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-content flex-col justify-end px-5 pb-14 pt-32 sm:px-8 lg:px-12">
         <Rise reduced={reduced} delay={0.9} className="max-w-3xl">
           <h1 id="hero-title">
@@ -159,7 +145,6 @@ export default function Hero() {
           </Button>
         </Rise>
 
-        {/* Technical footer: location, coordinates, honesty note */}
         <Rise reduced={reduced} delay={1.7} className="mt-12 flex flex-col gap-4 border-t border-ivory/15 pt-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="font-mono text-[0.68rem] uppercase tracking-technical text-steel">
             <p className="text-ivory">{t('hero.location')}</p>
@@ -173,7 +158,6 @@ export default function Hero() {
           </div>
         </Rise>
 
-        {/* Fallback chips keep the four pillars visible when 3D annotations are absent */}
         {caps && !show3d ? (
           <ul className="mt-6 flex flex-wrap gap-2">
             {TAGS.map((k) => (
