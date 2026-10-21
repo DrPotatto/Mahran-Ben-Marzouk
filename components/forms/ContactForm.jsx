@@ -9,12 +9,6 @@ import { buildInquiryMessage, buildMailtoLink, buildWhatsAppLink, getContactConf
 import { formatCurrency } from '../../lib/formatters';
 import { useI18n } from '../AppProvider';
 
-// Contact form shared by the estimator (with `project` + `estimate`) and the Contact section.
-//
-// Honesty rules enforced here:
-//  - "saved" is shown only after the server confirmed an insert (HTTP 2xx).
-//  - Without storage the form says plainly that nothing was sent and offers direct channels.
-//  - WhatsApp / e-mail buttons only exist when those channels are configured.
 export default function ContactForm({ project = null, estimate = null, initialMessage = '', idPrefix = 'cf' }) {
   const { t, lang } = useI18n();
   const contactCfg = useMemo(() => getContactConfig(), []);
@@ -32,7 +26,6 @@ export default function ContactForm({ project = null, estimate = null, initialMe
   const [copied, setCopied] = useState(null); // 'ok' | 'fail' | null
   const statusRef = useRef(null);
 
-  // Topic chosen elsewhere (service / project CTA) pre-fills the message unless the visitor already typed their own.
   const lastTopic = useRef(initialMessage);
   useEffect(() => {
     setValues((v) => (v.message === '' || v.message === lastTopic.current ? { ...v, message: initialMessage } : v));
@@ -70,15 +63,19 @@ export default function ContactForm({ project = null, estimate = null, initialMe
         formatMoney,
         methodLabel: t(`contact.methods.${values.preferred}`),
       }),
-    // formatMoney depends only on lang
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [values, project, estimate, lang]
+    [values, project, estimate, lang, t]
   );
 
   const validate = () => {
     const found = validateContact(values);
     setErrors(found);
-    return Object.keys(found).length === 0;
+    
+    // If there are errors, we need to tell the user visually
+    if (Object.keys(found).length > 0) {
+      // The error messages will show up under the fields automatically
+      return false;
+    }
+    return true;
   };
 
   const errorText = (field) => {
@@ -106,13 +103,20 @@ export default function ContactForm({ project = null, estimate = null, initialMe
   };
 
   const openChannel = (kind) => {
+    // The user MUST fill in Name and Phone to generate a valid message
     if (!validate()) return;
+    
     if (kind === 'whatsapp') {
       const link = buildWhatsAppLink(contactCfg.whatsapp, messageText);
-      if (link) window.open(link, '_blank', 'noopener,noreferrer');
+      if (link) {
+        // Using location.href is safer than window.open and bypasses popup blockers
+        window.location.href = link;
+      }
     } else if (kind === 'email') {
       const link = buildMailtoLink(contactCfg.email, t('inquiry.subject'), messageText);
-      if (link) window.location.href = link;
+      if (link) {
+        window.location.href = link;
+      }
     }
   };
 
@@ -214,7 +218,6 @@ export default function ContactForm({ project = null, estimate = null, initialMe
         </Button>
       </div>
 
-      {/* Status messages: exactly what happened, nothing more */}
       <div ref={statusRef} tabIndex={-1} aria-live="polite" className="outline-none">
         {status === 'saved' ? <StatusBox tone="ok" title={t('contact.status.savedTitle')} text={t('contact.status.saved')} /> : null}
         {status === 'unconfigured' ? (
