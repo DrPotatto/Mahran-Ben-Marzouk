@@ -34,6 +34,7 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
           : roundTo(area * item.qtyFactor, 1);
       const unitPrice = item.material + item.labour;
       const amount = roundMoney(quantity * unitPrice * floorMultiplier);
+      
       lines.push({
         id: `${scopeId}__${item.id}`,
         kind: 'scope',
@@ -72,6 +73,7 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
     preFeeTotal * config.engineering.studyPercent +
       (config.engineering.fixedFeeMin + config.engineering.fixedFeeMax) / 2
   );
+  
   const preContingency = preFeeTotal + engStudyFee;
   const contingency = roundMoney(preContingency * config.contingency);
   const total = preContingency + contingency;
@@ -80,9 +82,6 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
     low: roundTo(total * (1 - config.range.lowerPct), config.range.roundTo),
     high: roundTo(total * (1 + config.range.upperPct), config.range.roundTo),
   };
-
-  const totalMaterial = lines.reduce((sum, l) => sum + (l.material || 0) * (l.quantity || 1) * (l.multiplier || 1), 0);
-  const totalLabour   = lines.reduce((sum, l) => sum + (l.labour   || 0) * (l.quantity || 1) * (l.multiplier || 1), 0);
 
   return {
     ok: true,
@@ -96,8 +95,6 @@ export function calculateEstimate(input, config = ESTIMATOR_CONFIG, today = new 
     contingency,
     total,
     range,
-    totalMaterial: roundMoney(totalMaterial),
-    totalLabour: roundMoney(totalLabour),
     assumptions: {
       area,
       floors,
