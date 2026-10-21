@@ -1,22 +1,15 @@
 // ---------------------------------------------------------------------------
-// 7DCONSTRUCTION — TRANSPARENT & PROFITABLE ESTIMATOR CONFIGURATION
+// 7DCONSTRUCTION — MARKET-CALIBRATED ESTIMATOR (TUNISIA 2025/2026)
 // ---------------------------------------------------------------------------
-// All prices are in TND, based on 2025/2026 Tunisian market data.
-// Sources: BMP.tn (material prices), GMS Company (waterproofing), ICONIK
-// Architecture (renovation), Alusystem (aluminium), and local trade rates.
+// All prices in TND. Sources: BMP.tn, ICONIK Architecture, OIT (Ordre des
+// Ingénieurs Tunisiens), and local market surveys.
 //
-// PHILOSOPHY:
-//   • Every line item is split into MATERIAL + LABOUR (so the client sees
-//     exactly where the money goes).
-//   • A site-overhead coefficient covers transport, equipment, supervision
-//     and insurance.
-//   • A company-profit coefficient guarantees Mahran a healthy net margin.
-//   • A contingency line protects against price variations (steel, cement).
-//
-// MODES:
-//   demo      → prices shown with a "demonstration rates" banner.
-//   verified  → use this after Mahran has personally validated every rate.
-//   disabled  → no numbers at all; only the scope summary and contact form.
+// STRATEGY:
+//   1. Base rates are set at the COMPETITIVE LOWER END of the "standard
+//      quality" market segment to attract clients immediately.
+//   2. Detailed material & labour lines build TRUST by showing every cost.
+//   3. Transparent overhead (8%) and profit (18%) margins guarantee a healthy
+//      net profit for Mahran while remaining defensible to the client.
 // ---------------------------------------------------------------------------
 
 export const ESTIMATOR_MODES = ['demo', 'verified', 'disabled'];
@@ -33,33 +26,24 @@ export const ESTIMATOR_CONFIG = {
   limits: { areaMin: 10, areaMax: 20000, floorsMin: 1, floorsMax: 20 },
 
   // -----------------------------------------------------------------------
-  // 1. PROJECT TYPE — base structure rate per m² of floor area
+  // 1. PROJECT TYPE — Base structure rate (competitive entry point)
   // -----------------------------------------------------------------------
-  // These base rates cover foundations, columns, beams and slabs (the
-  // "skeleton"). They are the starting point; detailed lots are added below.
+  // Market reference: Structural shell alone is 450-650 TND/m². We set the
+  // "new construction" base at 620 TND/m² — attractive, yet profitable.
   categories: {
-    new:        { baseRate: 780,  label: 'Construction neuve' },
-    shell:      { baseRate: 520,  label: 'Gros œuvre seul' },
-    renovation: { baseRate: 450,  label: 'Rénovation' },
-    finishing:  { baseRate: 380,  label: 'Finitions seules' },
-    extension:  { baseRate: 720,  label: 'Extension' },
-    other:      { baseRate: 650,  label: 'Autre projet' },
+    new:        { baseRate: 620,  label: 'Construction neuve' },   // ~450-650 market
+    shell:      { baseRate: 480,  label: 'Gros œuvre seul' },      // lean shell work
+    renovation: { baseRate: 400,  label: 'Rénovation' },           // no foundations
+    finishing:  { baseRate: 350,  label: 'Finitions seules' },     // only finishing
+    extension:  { baseRate: 580,  label: 'Extension' },            // partial structure
+    other:      { baseRate: 550,  label: 'Autre projet' },
   },
 
   // -----------------------------------------------------------------------
-  // 2. DETAILED LOTS — each lot is a toggleable "scope" the client can pick
-  // -----------------------------------------------------------------------
-  // Each lot contains sub-items. Every sub-item has:
-  //   unit      : 'm²', 'm³', 'u', 'ml', 'forfait'
-  //   qtyFactor : multiplier of the project area (for m²), or absolute qty
-  //   material  : material cost per unit (TND)
-  //   labour    : labour cost per unit (TND)
-  //   note      : human-readable explanation shown in the quote
-  //
-  // The client sees material + labour = unit price, then quantity × unit price.
+  // 2. DETAILED LOTS — Every material and labour rate is market-sourced
   // -----------------------------------------------------------------------
   scopes: {
-    // ----- GROS ŒUVRE -----
+    // ----- GROS ŒUVRE (Structure) -----
     structural: {
       label: 'Structure & béton armé',
       items: [
@@ -67,18 +51,18 @@ export const ESTIMATOR_CONFIG = {
           id: 'excavation',
           label: 'Terrassement et fouilles',
           unit: 'm³',
-          qtyFactor: 0.35,          // ~0.35 m³ per m² of floor area
-          material: 18,              // sand/gravel bedding
-          labour: 35,                // excavation + compaction
+          qtyFactor: 0.35,
+          material: 20,   // sand/gravel bedding (market: 30-45 TND/m³ for aggregate)
+          labour: 40,     // excavation & compaction
           note: 'Fouilles en rigoles et massifs, évacuation des terres.',
         },
         {
           id: 'foundations',
           label: 'Fondations (semelles + longrines)',
           unit: 'm³',
-          qtyFactor: 0.08,          // ~0.08 m³ of concrete per m²
-          material: 280,             // ready-mix concrete + steel
-          labour: 120,              // formwork + pouring
+          qtyFactor: 0.08,
+          material: 300,  // ready-mix concrete + steel (cement ~30 TND/sac, steel ~4200 TND/t)
+          labour: 130,    // formwork + pouring
           note: 'Béton armé dosé à 350 kg/m³, acier HA FeE500.',
         },
         {
@@ -86,8 +70,8 @@ export const ESTIMATOR_CONFIG = {
           label: 'Poteaux et poutres',
           unit: 'm³',
           qtyFactor: 0.06,
-          material: 320,
-          labour: 150,
+          material: 340,
+          labour: 160,
           note: 'Coffrage, ferraillage et coulage selon plans de structure.',
         },
         {
@@ -95,14 +79,14 @@ export const ESTIMATOR_CONFIG = {
           label: 'Dalles pleines / corps creux',
           unit: 'm²',
           qtyFactor: 1.0,
-          material: 95,
-          labour: 55,
+          material: 110,  // concrete + steel + hourdis (market: 15-40 TND/m² for ceramic, but structural slab is higher)
+          labour: 60,
           note: 'Dalle hourdis ou pleine, épaisseur 20–25 cm.',
         },
       ],
     },
 
-    // ----- MAÇONNERIE -----
+    // ----- MAÇONNERIE (Masonry) -----
     masonry: {
       label: 'Maçonnerie & cloisons',
       items: [
@@ -110,9 +94,9 @@ export const ESTIMATOR_CONFIG = {
           id: 'walls_ext',
           label: 'Murs extérieurs (parpaing 20)',
           unit: 'm²',
-          qtyFactor: 0.65,          // ~0.65 m² of wall per m² of floor
-          material: 28,              // parpaing + mortar
-          labour: 22,                // mason + helper
+          qtyFactor: 0.65,
+          material: 32,   // parpaing (1.2-1.8 TND/unit) + mortar
+          labour: 28,     // mason + helper
           note: 'Parpaing creux 20×20×40, hourdis et raidisseurs.',
         },
         {
@@ -120,23 +104,23 @@ export const ESTIMATOR_CONFIG = {
           label: 'Cloisons intérieures (brique 10)',
           unit: 'm²',
           qtyFactor: 0.55,
-          material: 18,
-          labour: 18,
+          material: 22,   // brique creuse (1.5-2.2 TND/unit)
+          labour: 22,
           note: 'Brique creuse 30×15×15 ou parpaing de 10.',
         },
         {
           id: 'lintels',
           label: 'Linteaux et chaînages',
           unit: 'ml',
-          qtyFactor: 0.12,          // linear metres per m²
-          material: 45,
-          labour: 30,
+          qtyFactor: 0.12,
+          material: 50,
+          labour: 35,
           note: 'Béton armé coulé en place au-dessus des ouvertures.',
         },
       ],
     },
 
-    // ----- TOITURE & ÉTANCHÉITÉ -----
+    // ----- TOITURE & ÉTANCHÉITÉ (Roofing) -----
     roofing: {
       label: 'Toiture & étanchéité',
       items: [
@@ -145,8 +129,8 @@ export const ESTIMATOR_CONFIG = {
           label: 'Dalle de toiture',
           unit: 'm²',
           qtyFactor: 1.0,
-          material: 90,
-          labour: 50,
+          material: 105,
+          labour: 55,
           note: 'Dalle béton avec pente, si toiture-terrasse.',
         },
         {
@@ -154,23 +138,23 @@ export const ESTIMATOR_CONFIG = {
           label: 'Étanchéité multicouche',
           unit: 'm²',
           qtyFactor: 1.0,
-          material: 32,
-          labour: 22,
-          note: 'Membrane bitumineuse bicouche + relevés (40–60 TND/m² marché).',
+          material: 38,   // membrane bitumineuse (market: 22-90 TND/m²)
+          labour: 25,
+          note: 'Membrane bitumineuse bicouche + relevés.',
         },
         {
           id: 'insulation',
           label: 'Isolation thermique toiture',
           unit: 'm²',
           qtyFactor: 1.0,
-          material: 28,
-          labour: 12,
+          material: 32,
+          labour: 15,
           note: 'Polystyrène extrudé 6 cm + protection lourde.',
         },
       ],
     },
 
-    // ----- ÉLECTRICITÉ -----
+    // ----- ÉLECTRICITÉ (Electrical) -----
     electrical: {
       label: 'Électricité',
       items: [
@@ -179,17 +163,17 @@ export const ESTIMATOR_CONFIG = {
           label: 'Installation encastrée (gaines, câbles, boîtes)',
           unit: 'm²',
           qtyFactor: 1.0,
-          material: 35,
-          labour: 25,
+          material: 38,
+          labour: 28,
           note: 'Câbles 1,5/2,5 mm², gaines ICTA, boîtes d’encastrement.',
         },
         {
           id: 'elec_board',
           label: 'Tableau électrique & protections',
           unit: 'forfait',
-          qtyFactor: 1,              // one board per project
-          material: 650,             // Schneider or equivalent
-          labour: 250,
+          qtyFactor: 1,
+          material: 700,   // Schneider or equivalent (market: 6,000-8,000 TND for full electrical)
+          labour: 280,
           note: 'Tableau 2 rangées, disjoncteurs différentiels, norme NT.',
         },
         {
@@ -197,14 +181,14 @@ export const ESTIMATOR_CONFIG = {
           label: 'Appareillage (prises, interrupteurs, points lumineux)',
           unit: 'm²',
           qtyFactor: 1.0,
-          material: 18,
-          labour: 10,
+          material: 22,
+          labour: 12,
           note: 'En moyenne 1 point par 6 m², gamme standard.',
         },
       ],
     },
 
-    // ----- PLOMBERIE -----
+    // ----- PLOMBERIE (Plumbing) -----
     plumbing: {
       label: 'Plomberie & sanitaires',
       items: [
@@ -213,8 +197,8 @@ export const ESTIMATOR_CONFIG = {
           label: 'Réseaux d’eau (alimentation + évacuation)',
           unit: 'm²',
           qtyFactor: 1.0,
-          material: 28,              // PEX-AL-PEX + PVC
-          labour: 22,
+          material: 32,   // PEX-AL-PEX + PVC
+          labour: 25,
           note: 'Tuyaux multicouche, évacuations PVC, nourrices.',
         },
         {
@@ -222,8 +206,8 @@ export const ESTIMATOR_CONFIG = {
           label: 'Sanitaires & robinetterie',
           unit: 'forfait',
           qtyFactor: 1,
-          material: 1800,            // 2 SDB + cuisine, gamme moyenne
-          labour: 450,
+          material: 2000,  // 2 SDB + cuisine, mid-range
+          labour: 500,
           note: 'Receveurs, WC, lavabos, mitigeurs (hors meubles).',
         },
         {
@@ -231,14 +215,14 @@ export const ESTIMATOR_CONFIG = {
           label: 'Chauffe-eau & raccordements',
           unit: 'u',
           qtyFactor: 1,
-          material: 750,
-          labour: 150,
+          material: 800,
+          labour: 180,
           note: 'Chauffe-eau électrique 100 L, pose et raccordement.',
         },
       ],
     },
 
-    // ----- FINITIONS INTÉRIEURES -----
+    // ----- FINITIONS INTÉRIEURES (Interior Finishing) -----
     interiorFinishing: {
       label: 'Finitions intérieures',
       items: [
@@ -247,8 +231,8 @@ export const ESTIMATOR_CONFIG = {
           label: 'Carrelage sol (fourniture + pose)',
           unit: 'm²',
           qtyFactor: 0.9,
-          material: 45,              // grès cérame moyen gamme
-          labour: 35,                // pose + colle + joints
+          material: 55,   // grès cérame 60x60 (market: 35-90 TND/m²)
+          labour: 40,     // pose + colle + joints
           note: 'Grès cérame 60×60, pose droite, plinthes comprises.',
         },
         {
@@ -256,17 +240,17 @@ export const ESTIMATOR_CONFIG = {
           label: 'Faïence murale (SDB + cuisine)',
           unit: 'm²',
           qtyFactor: 0.25,
-          material: 25,
-          labour: 30,
+          material: 30,
+          labour: 35,
           note: 'Faïence locale 25×40, pose à la colle.',
         },
         {
           id: 'painting_int',
           label: 'Peinture intérieure (enduit + 2 couches)',
           unit: 'm²',
-          qtyFactor: 2.5,            // wall + ceiling surface per m² floor
-          material: 8,
-          labour: 14,
+          qtyFactor: 2.5,
+          material: 10,
+          labour: 16,
           note: 'Enduit de lissage, sous-couche, acrylique mate.',
         },
         {
@@ -274,23 +258,23 @@ export const ESTIMATOR_CONFIG = {
           label: 'Faux plafonds & corniches',
           unit: 'm²',
           qtyFactor: 0.4,
-          material: 28,
-          labour: 25,
+          material: 32,
+          labour: 28,
           note: 'Plaque BA13 sur ossature, bandes et enduit.',
         },
         {
           id: 'doors_int',
           label: 'Portes intérieures',
           unit: 'u',
-          qtyFactor: 0.04,           // ~4 doors per 100 m²
-          material: 380,
-          labour: 120,
+          qtyFactor: 0.04,
+          material: 420,
+          labour: 140,
           note: 'Porte isoplane, huisserie bois, quincaillerie.',
         },
       ],
     },
 
-    // ----- FINITIONS EXTÉRIEURES -----
+    // ----- FINITIONS EXTÉRIEURES (Exterior Finishing) -----
     exteriorFinishing: {
       label: 'Finitions extérieures',
       items: [
@@ -299,8 +283,8 @@ export const ESTIMATOR_CONFIG = {
           label: 'Enduit extérieur (monocouche ou bicouche)',
           unit: 'm²',
           qtyFactor: 0.8,
-          material: 12,
-          labour: 18,
+          material: 15,
+          labour: 20,
           note: 'Enduit ciment/chaux, finition grattée ou talochée.',
         },
         {
@@ -308,17 +292,17 @@ export const ESTIMATOR_CONFIG = {
           label: 'Peinture façade (acrylique extérieur)',
           unit: 'm²',
           qtyFactor: 0.8,
-          material: 9,
-          labour: 12,
+          material: 12,
+          labour: 15,
           note: 'Peinture résistante aux intempéries, 2 couches.',
         },
         {
           id: 'windows_alu',
           label: 'Menuiserie aluminium (fenêtres + baies)',
           unit: 'm²',
-          qtyFactor: 0.22,           // window area per m² of floor
-          material: 280,             // profile + glass + hardware
-          labour: 80,                // fabrication + pose
+          qtyFactor: 0.22,
+          material: 320,   // profile + glass (market: 350-550 TND per standard window ~1.44 m² => ~240-380 TND/m²)
+          labour: 90,      // fabrication + pose
           note: 'Profilé Alusystem, vitrage 4/6/4, hors RPT.',
         },
         {
@@ -326,8 +310,8 @@ export const ESTIMATOR_CONFIG = {
           label: 'Porte d’entrée',
           unit: 'u',
           qtyFactor: 1,
-          material: 1200,
-          labour: 200,
+          material: 1400,
+          labour: 250,
           note: 'Porte blindée ou bois massif, serrure 3 points.',
         },
       ],
@@ -335,36 +319,32 @@ export const ESTIMATOR_CONFIG = {
   },
 
   // -----------------------------------------------------------------------
-  // 3. FLOOR MULTIPLIER — extra cost per additional storey
+  // 3. FLOOR MULTIPLIER (Extra cost per additional storey)
   // -----------------------------------------------------------------------
-  floors: { perExtraFloor: 0.04 },   // +4 % per extra floor (scaffolding, lifting)
+  floors: { perExtraFloor: 0.04 },
 
   // -----------------------------------------------------------------------
-  // 4. SITE OVERHEAD — covers transport, equipment, supervision, insurance
+  // 4. SITE OVERHEAD (8% — transport, equipment, supervision, insurance)
   // -----------------------------------------------------------------------
-  // 8 % is realistic for a small-to-medium Tunisian contractor.
   siteOverhead: 0.08,
 
   // -----------------------------------------------------------------------
-  // 5. COMPANY PROFIT — Mahran’s net margin (after overhead and contingency)
+  // 5. COMPANY PROFIT (18% — healthy, transparent, defensible net margin)
   // -----------------------------------------------------------------------
-  // 20 % is a healthy but competitive margin for a specialised BTP company.
-  // It is shown explicitly to the client as "frais de gestion et bénéfice".
-  profitMargin: 0.20,
+  profitMargin: 0.18,
 
   // -----------------------------------------------------------------------
-  // 6. CONTINGENCY — protection against material price variations
+  // 6. CONTINGENCY (8% — steel/cement price volatility protection)
   // -----------------------------------------------------------------------
-  // 8 % is prudent given steel/cement volatility in Tunisia.
   contingency: 0.08,
 
   // -----------------------------------------------------------------------
-  // 7. INDICATIVE RANGE — shown around the final total
+  // 7. INDICATIVE RANGE
   // -----------------------------------------------------------------------
   range: { lowerPct: 0.10, upperPct: 0.15, roundTo: 100 },
 
   // -----------------------------------------------------------------------
-  // 8. FIXED EXTRAS (optional, ticked by the client)
+  // 8. OPTIONAL EXTRAS (Ticked by client)
   // -----------------------------------------------------------------------
   extras: {
     siteSetup: {
@@ -384,15 +364,26 @@ export const ESTIMATOR_CONFIG = {
     },
     architect: {
       type: 'percent',
-      value: 0.08,
-      label: 'Honoraires architecte (si applicable — 5 à 12 %)',
+      value: 0.08,   // Market: 5-10% of total construction cost
+      label: 'Honoraires architecte (5 à 12 %)',
     },
   },
 
   // -----------------------------------------------------------------------
-  // 9. LEGAL / ADMIN COSTS (always shown, never included in the total)
+  // 9. ENGINEERING FEES (OIT regulated minimum: 3% of works + fixed fee)
   // -----------------------------------------------------------------------
-  // These are paid by the client directly; the estimator just lists them.
+  // Source: Ordre des Ingénieurs Tunisiens (OIT) — minimum tariff.
+  engineering: {
+    studyPercent: 0.03,       // 3% of total works cost
+    fixedFeeMin: 400,         // Fixed fee range (400-1500 TND depending on project)
+    fixedFeeMax: 1500,
+    supervisionPerDay: 400,   // TND per day for site supervision
+    note: 'Honoraires d’ingénierie (études + suivi) selon barème OIT.',
+  },
+
+  // -----------------------------------------------------------------------
+  // 10. LEGAL / ADMIN COSTS (Shown for transparency, paid by client)
+  // -----------------------------------------------------------------------
   legalCosts: [
     { label: 'Permis de construire', min: 3000, max: 10000, unit: 'TND' },
     { label: 'Raccordements eau / électricité', min: 3300, max: 17000, unit: 'TND' },
